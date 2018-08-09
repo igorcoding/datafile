@@ -21,8 +21,10 @@ function unix.get_dirs(context)
          else
             table.insert(dirs, prefix .. "/share/lua/" .. luaver)
             table.insert(dirs, prefix .. "/lib/lua/" .. luaver)
+            table.insert(dirs, prefix .. "/lib64/lua/" .. luaver)
             table.insert(dirs, prefix .. "/share")
             table.insert(dirs, prefix .. "/lib")
+            table.insert(dirs, prefix .. "/lib64")
          end
       end
    end

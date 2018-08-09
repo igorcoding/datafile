@@ -26,11 +26,18 @@ function luarocks.get_dirs()
       local prefix, luaver, modpath = source:match("@(.*)/share/lua/([^/]*)/(.*)")
       if prefix and luaver and modpath then
          local modname = path.path_to_module(modpath):gsub("\\","."):gsub("/",".")
-         local rocks_dir = prefix.."/lib/luarocks/rocks-"..luaver
-         local manifest = load_local_manifest(rocks_dir)
-         if not manifest then -- look for generic rocks_dir
-            rocks_dir = prefix.."/lib/luarocks/rocks"
+         local rocks_dirs = {
+            prefix.."/lib/luarocks/rocks-"..luaver,
+            prefix.."/lib/luarocks/rocks",
+            prefix.."/lib64/luarocks/rocks-"..luaver,
+            prefix.."/lib64/luarocks/rocks",
+         }
+         local manifest
+         for _, rocks_dir in ipairs(rocks_dirs) do
             manifest = load_local_manifest(rocks_dir)
+            if manifest then
+                break
+            end
          end
          if not manifest then
             return nil, "could not open LuaRocks manifest for "..prefix
@@ -46,26 +53,36 @@ function luarocks.get_dirs()
          local dirs = {
             prefix .. "/share/lua/" .. luaver,
             prefix .. "/lib/lua/" .. luaver,
+            prefix .. "/lib64/lua/" .. luaver,
          }
 
          if providers then
             for _, provider in ipairs(providers) do
                table.insert(dirs, prefix .. "/lib/luarocks/rocks/" .. provider)
                table.insert(dirs, prefix .. "/lib/luarocks/rocks-"..luaver.."/" .. provider)
+               table.insert(dirs, prefix .. "/lib64/luarocks/rocks/" .. provider)
+               table.insert(dirs, prefix .. "/lib64/luarocks/rocks-"..luaver.."/" .. provider)
             end
          end
          return dirs
       else
-         local rockdir
-         rockdir, prefix, luaver = source:match("@((.*)/lib/luarocks/rocks%-?([^/]*)/[^/]*/[^/]*)/.*$")
-         if prefix and luaver and rockdir then
-            luaver = luaver ~= "" and luaver or _VERSION:match(" ([^ ]+)$")
-            local dirs = {
-               prefix .. "/share/lua/" .. luaver,
-               prefix .. "/lib/lua/" .. luaver,
-               rockdir
-            }
-            return dirs
+         local patterns = {
+            "@((.*)/lib/luarocks/rocks%-?([^/]*)/[^/]*/[^/]*)/.*$",
+            "@((.*)/lib64/luarocks/rocks%-?([^/]*)/[^/]*/[^/]*)/.*$",
+         }
+         for _, pattern in ipairs(patterns) do
+            local rockdir
+            rockdir, prefix, luaver = source:match(pattern)
+            if prefix and luaver and rockdir then
+               luaver = luaver ~= "" and luaver or _VERSION:match(" ([^ ]+)$")
+               local dirs = {
+                  prefix .. "/share/lua/" .. luaver,
+                  prefix .. "/lib/lua/" .. luaver,
+                  prefix .. "/lib64/lua/" .. luaver,
+                  rockdir
+               }
+               return dirs
+            end
          end
       end
    end
